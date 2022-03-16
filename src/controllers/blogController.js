@@ -1,5 +1,6 @@
 const authorModel = require("../models/authorModel")
 const BlogModel=require("../models/blogsModel")
+const jwt =require("jsonwebtoken")
 
 const createBlogs=async function(req,res){
     try{
@@ -67,12 +68,6 @@ const getBlogs=async function(req,res){
             const data = request.body;
             const fetchData = await BlogModel.findById(id);
             if (fetchData.isPublished) {
-                
-
-                // return response.status(404).send({
-                //     'status': false,
-                //     'Error: ': 'Blog Not Found !'
-                // });
             
             data.publishedAt = new Date();
             data.isPublished = true
@@ -97,40 +92,6 @@ const getBlogs=async function(req,res){
     }
 
 
-
-//     const Id = req.params.blogId
-//     try {
-//         if (Id) {
-//             let data = await BlogModel.findById(Id)
-//             if (data.isDeleted == false) {
-//     let value1 = req.body.bodyupdate
-//         let value2 = req.body.title
-//           const arr2 = req.body.subcategory
-//           const arr1 = req.body.tags
-//            data.tags = data.tags.concat(arr1)
-//                const result1 = data.tags.filter(b => b != null)
-//                 console.log(data.tags)
-//                 data.subcategory = data.subcategory.concat(arr2)
-//                 const result2 = data.subcategory.filter(b => b != null)
-//                 console.log(data.subcategory)
-//    let data2 = await BlogModel.findOneAndUpdate({ _id: Id }, { title: value2, body: value1, tags: result1, subcategory: result2 }, { new: true })
-//                 if (data.isPublished == false)
-//       data2 = await BlogModel.findOneAndUpdate({ _id: Id }, { isPublished: true, publishedAt: Date.now() }, { new: true })
-//                 res.status(200).send({ status: true, msg: data2 })
-//             }
-//             else
-//                 res.status(404).send({ status: "false", msg: "data is already deleted" })
-
-//         }
-//         else
-//             res.status(404).send({ status: "false", msg: "id is not exist" })
-
-//     }
-//     catch (err) { res.status(500).send({ message:err.message }) 
-//     }
-// }
-
-
 const BlogDeleted = async function (req, res) {
     try {
         let id = req.params.blogId
@@ -149,7 +110,62 @@ const BlogDeleted = async function (req, res) {
     }
     catch (err) { res.status(500).send({status:false, message:err.message }) }
 }
-module.exports.createBlogs=createBlogs
-module.exports.getBlogs=getBlogs
-module.exports.updatedBlog=updatedBlog
-module.exports.BlogDeleted=BlogDeleted
+
+const deleteByQuery = async function (req, res){
+    try {
+        const data = req.query; 
+        const fetchData = await BlogModel.find(data);
+        if(!fetchData.length){
+            return res.status(404).send({
+                status: false,
+                msg: 'Blog not found !'
+            });
+        }
+        for(let i = 0; i < fetchData.length; i++){
+            if(fetchData[i].isDeleted){
+                const dataRes = await BlogModel.updateMany(data, { isDeleted: true }); 
+                return res.status(200).send({
+                    status: true,
+                    msg: dataRes
+                }); 
+
+            }
+        }
+                return res.status(404).send({
+                    status: false,
+                    msg: 'Blog not found !'
+                }); 
+            
+        
+    } catch (error) {
+        return res.status(500).send({
+            Error: error.message
+        });
+    }
+}
+
+const loginUser = async function (req, res) {
+    let userName = req.body.emailId;
+    let password = req.body.password;
+  
+    let user = await authorModel.findOne({ emailId: userName, password: password });
+  
+    if (!user)
+      return res.send({
+        status: false,
+        msg: "username or the password is not corerct",
+      });
+  
+  
+    let token = jwt.sign(
+      {
+        userId: user._id.toString()
+        
+      },
+      "mykey"
+    );
+    res.setHeader("x-api-key", token);
+    res.send({ status: true, data: token });
+  };
+  
+module.exports={deleteByQuery, createBlogs,getBlogs, updatedBlog,BlogDeleted, loginUser}
