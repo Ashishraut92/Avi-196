@@ -62,11 +62,18 @@ const getBlogs=async function(req,res){
 }
 
 // const updatedBlog = async function (req, res) {
-    const updatedBlog = async (request, response) => {
+    const updatedBlog = async function (req, res) {
+
         try {
-            const id = request.params.blogId;
-            const data = request.body;
+            const id = req.params.blogId;
+            
+            const data = req.body;
             const fetchData = await BlogModel.findById(id);
+          let authId=fetchData.authorId
+          console.log(authId,req.user)
+          if(req.user!=authId){
+              return res.status(400).send({msg:"you are not authorized"})
+          }
             if (fetchData.isPublished) {
             
             data.publishedAt = new Date();
@@ -74,18 +81,18 @@ const getBlogs=async function(req,res){
             const dataRes = await BlogModel.findByIdAndUpdate(id, data, {
                 new: true
             });
-            return response.status(200).send({
+            return res.status(200).send({
                 status: true,
                 msg: dataRes
             });
         }
-          return response.status(404).send({
+          return res.status(404).send({
                  status: false,
                  Error: 'Blog Not Found !'
              });
             }
         catch (error) {
-            return response.status(500).send({
+            return res.status(500).send({
                 Error: error.message
             });
         }
@@ -111,38 +118,40 @@ const BlogDeleted = async function (req, res) {
     catch (err) { res.status(500).send({status:false, message:err.message }) }
 }
 
-const deleteByQuery = async function (req, res){
+const deleteByQuery = async (req, res) => {
     try {
-        const data = req.query; 
-        const fetchData = await BlogModel.find(data);
-        if(!fetchData.length){
-            return res.status(404).send({
-                status: false,
-                msg: 'Blog not found !'
-            });
-        }
-        for(let i = 0; i < fetchData.length; i++){
-            if(fetchData[i].isDeleted){
-                const dataRes = await BlogModel.updateMany(data, { isDeleted: true }); 
-                return res.status(200).send({
-                    status: true,
-                    msg: dataRes
-                }); 
-
-            }
-        }
-                return res.status(404).send({
-                    status: false,
-                    msg: 'Blog not found !'
-                }); 
-            
-        
-    } catch (error) {
-        return res.status(500).send({
-            Error: error.message
+      const data = req.query;
+      const fetchData = await BlogModel.find(data);
+    
+  
+      console.log(fetchData.authorId)
+      console.log(data.authorId)
+  
+      if(req.user!=data.authorId){
+        return res.status(400).send("You are not authorized")
+      }
+      if (!fetchData.length) {
+        return res.status(404).send({
+          status: false,
+          msg: "Blog not found!",
         });
+      }
+      for (let i = 0; i < fetchData.length; i++) {
+        if (!fetchData[i].isDeleted) {
+          const dataRes = await BlogModel.updateMany(data, { isDeleted: true });
+          res.status(200).send({ status: true, msg: dataRes });
+        }
+        return res.status(404).send({
+          status: false,
+          msg: "Blog not found !",
+        });
+      }
+    } catch (error) {
+      return res.status(500).send({
+        "Error: ": error.message,
+      });
     }
-}
+  };
 
 const loginUser = async function (req, res) {
     let userName = req.body.emailId;
@@ -159,7 +168,7 @@ const loginUser = async function (req, res) {
   
     let token = jwt.sign(
       {
-        userId: user._id.toString()
+        userId: user._id.toString(),
         
       },
       "mykey"
@@ -168,4 +177,5 @@ const loginUser = async function (req, res) {
     res.send({ status: true, data: token });
   };
   
-module.exports={deleteByQuery, createBlogs,getBlogs, updatedBlog,BlogDeleted, loginUser}
+module.exports={deleteByQuery, createBlogs,getBlogs, updatedBlog,loginUser}
+module.exports.BlogDeleted=BlogDeleted

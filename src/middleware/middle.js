@@ -1,24 +1,29 @@
 const jwt = require("jsonwebtoken");
+const blogsModel=require("../models/blogsModel")
 
-// A. Atuthentication
+
 const MDwear = (req, res, next) => {
-  try {
-    const token = req.headers["x-api-key"];
-    if (!token) {
-      return res
-        .status(401)
-        .send({ status: false, msg: "token must be present" });
+    try {
+  
+      let id2=req.query.authorId
+      const token = req.headers["x-api-key"];
+      if (!token) {
+        return res
+          .status(401)
+          .send({ status: false, msg: "token must be present" });
+      }
+    //   const decodedToken = jwt.verify(token, "backend-project");
+    //   if (decodedToken.authorId !== id2) {
+    //     return res
+    //       .status(401)
+    //       .send({ status: false, msg: "you must have to login first" });
+    //   }
+      next();
+    } catch (err) {
+      res.status(500).send({status: false, msg: err.message});
     }
+  };
+  
 
-    const decodedToken = jwt.verify(token, "mykey");
-// B. Authorization
-    if (decodedToken.authorId !== req.params.authorId) {
-      return res.status(401).send({ msg: "you must have to login first" });
-    }
-    next();
-  } catch (error) {
-    res.status(500).send(error);
-  }
-};
 
 module.exports.MDwear = MDwear;
